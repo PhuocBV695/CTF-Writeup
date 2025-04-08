@@ -243,6 +243,44 @@ for i in range(71,100):
     print(chr(enc[i]^enc[i-1]),end='')
 #unh4Ndl33xC3pTi0n_pebDebU9_nt9lob4Lfl49_s0F7w4r38r34Kp01n7_int2d_int3_YXV0aG9ydHVuYTk5ZnJvbWtjc2M===
 ```
+# Heavensdoor.exe  
+main:  
+![image](https://github.com/user-attachments/assets/19f32b9a-b498-4066-b6b0-c1a62679266e)  
+![image](https://github.com/user-attachments/assets/a21cc327-4ad4-47bc-baac-e5d043ee5d6b)  
+ta thấy push 0x33 vào stack
+tiếp theo `call $+5` push `eip` vào stack  
+cộng thêm 5 vào giá trị vừa push vào  
+gọi retf  
+retfar thực hiện chức năng như `ret` và thay đổi thanh ghi `CS` thành 0x33 (tức 64 bit) và chuyển sang môi trường 64bit.  
+tiếp theo:  
+![image](https://github.com/user-attachments/assets/f8cbb426-113b-4c8c-b766-f95b528333ea)  
+
+chương trình lea 1 địa chỉ chứa eax và gọi hàm tại địa chỉ đó.  
+ta trỏ vào eax:  
+chương trình thực hiện xor từng input và kiểm tra điều kiện.  
+sau khi call thành công eax, chương trinh lại push 0x23 (tức 32) và eip, retfar đưa chương trình về lại 32 bit  
+![image](https://github.com/user-attachments/assets/82c02fb1-bf15-4995-8295-66bce86a0638)  
+nếu hàm kiểm tra điều kiện vừa rồi đúng thì báo Correct và in ra flag, ngược lại thì báo incorrect.  
+vậy ta phải nhập input đúng để thỏa mãn điều kiện.  
+script:  
+```python
+import idc
+import ida_bytes
+
+ea = 0x01180403 #giá trị eax lúc call eax
+xor_key=[]
+enc=[]
+for i in range(0,400,size):
+    size = ida_bytes.get_item_size(ea+i)
+    op = ida_bytes.get_bytes(ea+i, size)
+    op2 = ida_bytes.get_bytes(ea+i+size, size)
+    if op[0]==0x34 or op[0]==0x80:
+        xor_key.append(op[-1])
+        enc.append(op2[-1])
+        print(chr((op[-1]^op2[-1])),end='')
+print(xor_key,enc,len(xor_key),len(enc))
+#h33d_t0_th3_c4ll_0f_th3_h34ven!!
+```
 
 
 
