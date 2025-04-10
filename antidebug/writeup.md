@@ -282,7 +282,40 @@ print(xor_key,enc,len(xor_key),len(enc))
 #h33d_t0_th3_c4ll_0f_th3_h34ven!!
 ```
 
+# anti3  
+main:  
+![image](https://github.com/user-attachments/assets/3f8c9124-94b1-48a1-9835-dc5916207706)  
+hàm xử lý chính của chương trình:  
+![image](https://github.com/user-attachments/assets/202aa723-05fe-4c54-91ba-eaa01823cd6a)  
+Chương trình xử lý input và kiểm tra điều kiện, nếu đúng thì gọi messagebox in `OK`, sai thì báo `Wrong`  
+đi vào `sub_F31B40`:  
+![image](https://github.com/user-attachments/assets/1ac3cefe-d3d5-4555-8363-c6a23630289f)  
+kiểm tra độ dài input, check flag từng kí tự  
+thứ tự các case: `dword_F332C8=[6, 1, 7, 1, 3, 2, 4, 3, 6, 3, 7, 6, 1, 4, 7, 4, 1, 5, 7, 6, 7, 5, 6, 4, 5, 1, 7, 5, 2, 3, 1, 2, 3, 2, 1, 6, 2, 4]`  
+vậy ta phân tích từ case 6  
+CASE 6:  
+![image](https://github.com/user-attachments/assets/c3b017b3-0002-49c1-a63c-256bb407b077)  
+mình đã rename các hàm dựa trên các chức năng của nó.  
+hàm `GetModuleAddressCRC((void *)0x2489AAB)`:  
+![image](https://github.com/user-attachments/assets/0be5b8df-af6c-4e55-ae3f-8f4130b9e7ed)  
+mình đã comment các dòng code như trong hình, cơ bản hàm này duyệt từng tên các module đã được load vào process, đưa về lowercase và tính CRC32, nếu bằng với CRC đã cho thì trả về địa chỉ của module  
+hàm `GetProcAddressCRC((int)LibraryCRC, 0x3200C39D);`:  
+![image](https://github.com/user-attachments/assets/19b7243e-e9e3-40cb-a4c9-8a777b7daa36)  
+hàm trên duyệt tên các API trong DLL, nếu có CRC32 trùng khớp với CRC32 đã cho thì trả về address của API đấy.  
+để biết chương trình đã gọi API gì thì khá đơn giản, đặt breakpoint và xem nó load gì là được:  
+![image](https://github.com/user-attachments/assets/8dbd5557-9677-45f4-8173-b52387509cc7)  
+![image](https://github.com/user-attachments/assets/a13a49be-b61c-4263-bdb6-e83bb1b08522)  
+vậy case này gọi API [BlockInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-blockinput).  
+https://anti-debug.checkpoint.com/techniques/interactive.html#blockinput  
+hàm này BlockInput từ user, nếu block thành công thì trả về nonzero, nếu gọi BlockInput lần nữa mà vẫn trả về nonzero thì chứng tỏ có debugger đang hoạt động  
+![image](https://github.com/user-attachments/assets/2f93e061-e782-4083-9eda-2efcc10cced2)  
 
+cách bypass: 
+nếu không có debugger, lần đầu check sẽ là v7!=0, v8=0, tuy nhiên do switchcase gọi nhiều lần nên chương trình đầu tiên đặt cờ `byte_3355B8`=0, sau khi check thì gán `byte_3355B8`=1 để kiểm tra theo cách khác, vì lần sau thì v7 và v8 đều bằng 0  
+để bypass thì ta patch sao cho chương trình luôn nhảy vào LABEL3:  
+![image](https://github.com/user-attachments/assets/19248605-f542-4898-9bd8-ea10c321bae9)  
+mã giả:  
+![image](https://github.com/user-attachments/assets/e43d754e-c646-44a0-9313-0aa494a67241)  
 
 
 
