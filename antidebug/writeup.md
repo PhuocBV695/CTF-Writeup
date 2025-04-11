@@ -285,6 +285,21 @@ print(xor_key,enc,len(xor_key),len(enc))
 # anti3  
 main:  
 ![image](https://github.com/user-attachments/assets/3f8c9124-94b1-48a1-9835-dc5916207706)  
+ta kiểm tra import thấy xuất hiện `TLSCallback`:  
+![image](https://github.com/user-attachments/assets/d465872e-cd42-41db-bbe8-a5c2f2e20115)  
+
+hàm `GetModuleAddressCRC((void *)0x2489AAB)`:  
+![image](https://github.com/user-attachments/assets/0be5b8df-af6c-4e55-ae3f-8f4130b9e7ed)  
+mình đã comment các dòng code như trong hình, cơ bản hàm này duyệt từng tên các module đã được load vào process, đưa về lowercase và tính CRC32, nếu bằng với CRC đã cho thì trả về địa chỉ của module  
+hàm `GetProcAddressCRC((int)LibraryCRC, 0x3200C39D);`:  
+![image](https://github.com/user-attachments/assets/19b7243e-e9e3-40cb-a4c9-8a777b7daa36)  
+hàm trên duyệt tên các API trong DLL, nếu có CRC32 trùng khớp với CRC32 đã cho thì trả về address của API đấy.  
+ta có thể biết chương trình đã resolve hàm gì bằng cách đặt breakpoint:  
+![image](https://github.com/user-attachments/assets/56762f5d-5a00-4169-a1f0-3063b40bbf1a)  
+![image](https://github.com/user-attachments/assets/d7255f4e-02a6-4174-b560-3e24f444660b)  
+vậy ta biết chương trình đã resolve hàm `NtQueryInformationProcess` với `ProcessInformationClass` = 0x7 tức `ProcessDebugPort`  
+đây là 1 kỹ thuật nhằm phát hiện antidebug, ta có thể bypass bằng cách đổi ZF flag  
+
 hàm xử lý chính của chương trình:  
 ![image](https://github.com/user-attachments/assets/202aa723-05fe-4c54-91ba-eaa01823cd6a)  
 Chương trình xử lý input và kiểm tra điều kiện, nếu đúng thì gọi messagebox in `OK`, sai thì báo `Wrong`  
@@ -296,13 +311,7 @@ vậy ta phân tích từ case 6
 CASE 6:  
 ![image](https://github.com/user-attachments/assets/c3b017b3-0002-49c1-a63c-256bb407b077)  
 mình đã rename các hàm dựa trên các chức năng của nó.  
-hàm `GetModuleAddressCRC((void *)0x2489AAB)`:  
-![image](https://github.com/user-attachments/assets/0be5b8df-af6c-4e55-ae3f-8f4130b9e7ed)  
-mình đã comment các dòng code như trong hình, cơ bản hàm này duyệt từng tên các module đã được load vào process, đưa về lowercase và tính CRC32, nếu bằng với CRC đã cho thì trả về địa chỉ của module  
-hàm `GetProcAddressCRC((int)LibraryCRC, 0x3200C39D);`:  
-![image](https://github.com/user-attachments/assets/19b7243e-e9e3-40cb-a4c9-8a777b7daa36)  
-hàm trên duyệt tên các API trong DLL, nếu có CRC32 trùng khớp với CRC32 đã cho thì trả về address của API đấy.  
-để biết chương trình đã gọi API gì thì khá đơn giản, đặt breakpoint và xem nó load gì là được:  
+ta xem chương trình đã resolve gì:  
 ![image](https://github.com/user-attachments/assets/8dbd5557-9677-45f4-8173-b52387509cc7)  
 ![image](https://github.com/user-attachments/assets/a13a49be-b61c-4263-bdb6-e83bb1b08522)  
 vậy case này gọi API [BlockInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-blockinput).  
@@ -317,12 +326,45 @@ nếu không có debugger, lần đầu check sẽ là v7!=0, v8=0, tuy nhiên d
 mã giả:  
 ![image](https://github.com/user-attachments/assets/e43d754e-c646-44a0-9313-0aa494a67241)  
 
+CASE 1:  
+![image](https://github.com/user-attachments/assets/d28e3b78-dcf2-4a21-990b-1729aec3b8eb)  
+ta có thể thấy chương trình phát hiện debug bằng cách kiểm tra giá trị trường `NtGlobalFlag` trong PEB:  
+![image](https://github.com/user-attachments/assets/e0d20bf2-a4c4-47c2-bb57-646ad1899594)  
+ta có thể bypass bằng cách đổi ZF hoặc patch  
+  
+CASE 7:  
+![image](https://github.com/user-attachments/assets/ef53e263-6819-4181-84fe-97225e70b5fb)  
+kiểm tra xem resolve hàm gì:  
+![image](https://github.com/user-attachments/assets/cc19b284-35dd-4a22-b135-d8f45ad4d9b6)  
+vậy case này antidebug bằng cách kiểm tra giá trị tại `NtQueryInformationProcess`(0x1f) tức `ProcessDebugFlags`  
+patch:  
+![image](https://github.com/user-attachments/assets/0985926b-bcbb-4716-88a5-4d191afe767a)  
+  
+CASE3:  
+![image](https://github.com/user-attachments/assets/a8b44750-bcd0-41b5-8ece-4bf9758895e5)  
+có vẻ là kiểm tra tổng 1 số trường `Heap Flags`  
+mình không rõ kỹ thuật anti-debug này lắm nhưng ta có thể patch để bypatch như sau:  
+![image](https://github.com/user-attachments/assets/bee798dc-8460-47b1-b56b-115f1f566038)  
 
+CASE 2:  
+![image](https://github.com/user-attachments/assets/f1bc511c-f039-4e92-9f9a-3b206b5fcb48)  
+tương tự như case 3 và tắt block input    
+CASE 4:  
+![image](https://github.com/user-attachments/assets/4d2b2eac-5e0f-4953-8705-11271dd45730)  
+cơ chế antidebug: nếu HEAP_TAIL_CHECKING_ENABLED flag được bật thì 0xABABABAB sẽ được thêm vào cuối khối heap đã cấp phát.  
+https://anti-debug.checkpoint.com/techniques/debug-flags.html#manual-checks-heap-protection  
+![image](https://github.com/user-attachments/assets/f8d0a68b-44ab-48dd-9b52-7253d5cc2318)  
+bypass:  
+![image](https://github.com/user-attachments/assets/2d9cd3d6-70d1-464d-b78a-ea06175ec07b)  
 
+CASE 5:  
+![image](https://github.com/user-attachments/assets/30c9a7a6-47b1-4d55-8d7a-01cb4d9c9b7a)  
+lấy tên handle chạy chương trình, tuy nhiên không thấy ảnh hưởng đến quá trình debug nên không cần bypass.  
 
-
-
-
+đã bypass hết các antidebug, ta chỉ cần nhặt các flag theo thứ tự là được.  
+`I_10v3-y0U__wh3n Y0u=c411..M3 Senor1t4`  
+flag:  
+![image](https://github.com/user-attachments/assets/1cd07c11-95b5-4433-877f-d4c32ebd9e04)  
 
 
 
