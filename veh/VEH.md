@@ -233,7 +233,120 @@ tiếp tục về phân tích hàm main:
 chương trình gọi hàm `sub_C719A0` và copy 4 bytes từ `dword_C74018` và 1 bytes từ `byte_C7401C` vào shellcode v4_2.  
 từ đây, ta có thể đoán được rằng KEY[2] == 0xD1 ^ 0xCC == 0x1d.  
 vào hàm `sub_C719A0`:  
+```c
+int __stdcall sub_C719A0(int a1)
+{
+  int v2; // [esp+Ch] [ebp-20h]
+  unsigned int v3; // [esp+10h] [ebp-1Ch]
+  char *Buf1; // [esp+14h] [ebp-18h]
+  unsigned int j; // [esp+18h] [ebp-14h]
+  unsigned int i; // [esp+1Ch] [ebp-10h]
+  unsigned int v7; // [esp+20h] [ebp-Ch] BYREF
+  char *v8; // [esp+24h] [ebp-8h] BYREF
 
+  v8 = 0;
+  v7 = 0;
+  if ( sub_C71820(a1, &v8, &v7) )               // search header
+    return 1;
+  for ( i = 0; i < 0xD2; ++i )                  // search shellcode
+  {
+    if ( !dword_C74178[14 * i] )
+    {
+      Buf1 = v8;
+      v3 = v7;
+      v2 = 0;
+      while ( dword_C74174[14 * i] <= v3 )
+      {
+        if ( !memcmp(Buf1, (char *)&unk_C74164 + 56 * i, dword_C74174[14 * i]) )
+        {
+          v2 = (int)Buf1;
+          break;
+        }
+        ++Buf1;
+        --v3;
+      }
+      if ( !v2 )
+        return 1;
+      dword_C74178[14 * i] = v2;
+      for ( j = 0; j < 0xD2; ++j )
+      {
+        if ( dword_C74174[14 * j] == dword_C74174[14 * i]
+          && !memcmp((char *)&unk_C74164 + 56 * j, (char *)&unk_C74164 + 56 * i, dword_C74174[14 * i]) )// trả về sub_C712A0
+        {
+          dword_C74178[14 * j] = dword_C74178[14 * i];
+        }
+      }
+    }
+  }
+  return 0;
+}
+```
+ta xem hàm `sub_C712A0`:  
+```c
+int __stdcall sub_C712A0(_BYTE *a1)
+{
+  int v2; // [esp+0h] [ebp-18h]
+  int v3; // [esp+4h] [ebp-14h]
+  int v4; // [esp+8h] [ebp-10h]
+  int v5; // [esp+Ch] [ebp-Ch]
+
+  if ( (unsigned __int8)(*a1 ^ LOBYTE(byte_C77470[1])) == 0x99 )// KEY[1]
+    v5 = 0;
+  else
+    v5 = 16;
+  if ( (unsigned __int8)(a1[4] ^ LOBYTE(byte_C77470[3])) == 0x4F )// KEY[4]
+    v4 = 0;
+  else
+    v4 = 16;
+  if ( (byte_C77470[1] ^ byte_C77470[0]) == *(_DWORD *)a1 )// KEY[1]^KEY[0]
+    v3 = 0;
+  else
+    v3 = 16;
+  if ( (byte_C77470[3] ^ byte_C77470[2]) == *((_DWORD *)a1 + 1) )// KEY[3]^KEY[2]
+    v2 = 0;
+  else
+    v2 = 16;
+  return v2 | v3 | v4 | v5;
+}
+```
+đến đây thì mình cũng không biết giải thế nào, tham khảo [https://hackmd.io/@BlackFrost/BJeEgqNZR?utm_source=preview-mode&utm_medium=rec#Sneaky-VEH]  
+script solve:  
+```python
+from z3 import *
+keyArray = [BitVec(f"x{i}", 32) for i in range(4)]
+
+HIBYTE = lambda x : (x >> 24) & 0xff
+HIWORD = lambda x : (x >> 16) & 0xffff
+BYTE1 = lambda x : (x >> 8) & 0xff
+
+s = Solver()
+
+s.add((HIBYTE(keyArray[0]) ^ HIWORD(keyArray[0]) ^ BYTE1(keyArray[0]) ^ keyArray[0]) & 0xff == 0x18)
+s.add((HIBYTE(keyArray[1]) ^ HIWORD(keyArray[1]) ^ BYTE1(keyArray[1]) ^ keyArray[1]) & 0xff == 0xa)
+s.add((HIBYTE(keyArray[2]) ^ HIWORD(keyArray[2]) ^ BYTE1(keyArray[2]) ^ keyArray[2]) & 0xff == 0x1d)
+s.add((keyArray[1] ^ (((keyArray[0] << 0x10) & 0xffff0000) | (keyArray[0] >> 8) & 0xFF00 | HIBYTE(keyArray[0]))) == 0x252D0D17)
+s.add((keyArray[0] ^ (((keyArray[1] << 0x10) & 0xffff0000) | (keyArray[1] >> 8) & 0xFF00 | HIBYTE(keyArray[1]))) == 0x253F1D15)
+s.add((keyArray[2] ^ (((keyArray[3] << 0x10) & 0xffff0000) | (keyArray[3] >> 8) & 0xFF00 | HIBYTE(keyArray[3]))) == 0x0BAA5756E)
+s.add((keyArray[3] ^ (((keyArray[2] << 0x10) & 0xffff0000) | (keyArray[2] >> 8) & 0xFF00 | HIBYTE(keyArray[2]))) == 0x0BEA57768)
+
+s.add((keyArray[1] ^ 0x43534341) & 0xff == 0x99)
+s.add((keyArray[3] ^ 0x32) & 0xff == 0x4f)
+s.add(keyArray[0] ^ keyArray[1] == 0x43534341)
+s.add(keyArray[2] ^ keyArray[3] == 0x34323032)
+
+print(s.check())
+m = s.model()
+
+for i in keyArray:
+    print(i, hex(m[i].as_long()))
+#x0 0xcfe7a999
+#x1 0x8cb4ead8
+#x2 0x15d89f4f
+#x3 0x21eaaf7d
+```
+flag:  
+![image](https://github.com/user-attachments/assets/2634a661-58d4-4912-8c24-e8ab919a8b0f)  
+# VEH  
 
 
 
