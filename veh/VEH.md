@@ -79,7 +79,7 @@ ta thay KEY[0]=0x18:
 ![image](https://github.com/user-attachments/assets/b6b6a020-c328-4477-89d2-db017f0b8765)  
 ![image](https://github.com/user-attachments/assets/5b96b1cf-0d41-4321-b1f1-72db4cddac40)  
 ta thấy đoạn shellcode đã trở thành code hợp lệ.  
-đoạn code này thực hiện gọi 1 exception là `int 3` và có thể là lấy base address của kernelbase.  
+đoạn code này thực hiện gọi 1 exception là `int 3` và có thể là lấy base address của ntdll.  
 nếu ta tiếp tục debug bằng debugger thì sẽ dẫn đến luồng bị sai  
 do hàm này đã gọi 1 ngoại lệ nên EIP lúc này sẽ nhảy vào exception filter tiếp theo (loc_BA1F19):  
 ![image](https://github.com/user-attachments/assets/84f66274-ac49-4be1-b9dd-2dc457cdc480)  
@@ -153,6 +153,86 @@ int __cdecl sub_BA4030(int a1)
 ```
 shellcode này thực hiện gọi exception `int 3` và thực hiện kỹ thuật PEB traversal để gọi `AddVectoredExceptionHandle(1, a1)`  
 ta tiếp tục phân tích except handler:  
+![image](https://github.com/user-attachments/assets/952338c2-648c-4bdc-89c1-406a2c607391)  
+chương trình tiếp tục gọi shell code `v4_1`, tuy nhiên lần này đã đẩy EIP lên nên không còn gọi exception nữa.  
+tiếp theo là copy toàn bộ shellcode `v4_2` vào lpAddress và gọi shellcode  
+do có exception `int 3` nên EIP nhảy vào exception filter (loc_C71F5D):  
+![image](https://github.com/user-attachments/assets/876edbfa-799b-45c0-9edc-ec847a05ba24)  
+vẫn giống như các filter trước, do `dword_C7746C` đã tăng lên 2 nên ta trỏ vào `offset dword_C74018`:  
+![image](https://github.com/user-attachments/assets/dc3c4e5d-859a-4e50-837a-899083dee641)  
+do chưa biết chương trình sẽ làm gì với `dword_C74018` nên ta chưa thể đoán được KEY[2] như lần trước.  
+tiếp tục vào except handler:  
+![image](https://github.com/user-attachments/assets/508acd8f-2548-460d-ad86-d99ddeabe802)  
+lần này đẩy `sub_C715D0` vào stack và tiếp tục gọi shellcode v4_2, tuy nhiên EIP đã tăng lên nên không còn gọi exception nữa.  
+đồng nghĩa với việc chương trình thực hiện `AddVectoredExceptionHandle(1, sub_C715D0)`.  
+hàm này đăng ký `sub_C715D0` với `AddVectoredExceptionHandle` với độ ưu tiên cao nhất `1`, nếu lần tiếp theo bắt được exception, chương trình sẽ nhảy vào `sub_C715D0`.  
+ta phân tích `sub_C715D0`:  
+![image](https://github.com/user-attachments/assets/5323c2fb-6e3e-446c-a1e4-d0d2e2f38c0a)  
+hàm này lọc các exception, và nếu có exception nằm trong filter, gọi hàm `sub_C713B0`.  
+ta xem hàm `sub_C713B0`:  
+```c
+void *__stdcall sub_C713B0(int **a1)
+{
+  int v2; // [esp+8h] [ebp-30h]
+  int v3; // [esp+Ch] [ebp-2Ch]
+  _BYTE *v4; // [esp+1Ch] [ebp-1Ch]
+  int v5; // [esp+20h] [ebp-18h]
+  int j; // [esp+24h] [ebp-14h]
+  unsigned int v7; // [esp+28h] [ebp-10h]
+  int i; // [esp+2Ch] [ebp-Ch]
+  int v9; // [esp+30h] [ebp-8h] BYREF
+
+  v2 = **a1;                                    // exception code
+  v3 = 0;
+  v7 = 0;
+  v5 = 0;
+  v9 = 0;
+  for ( i = 0; i < 4; ++i )
+  {
+    v9 = dword_C74138[i];
+    v4 = lpAddress;
+    if ( v2 == dword_C74118[i] && !dword_C77458[i] )
+    {
+      for ( j = 0; j < 4; ++j )
+        v4[j] ^= *((_BYTE *)&v9 + j);
+      switch ( i )
+      {
+        case 0:
+          v7 = byte_C77470[0];                  // KEY[0]
+          v5 = byte_C77470[1];                  // KEY[1]
+          break;
+        case 1:
+          v7 = byte_C77470[1];
+          v5 = byte_C77470[0];
+          break;
+        case 2:
+          v7 = byte_C77470[2];                  // KEY[2]
+          v5 = byte_C77470[3];                  // KEY[3]
+          break;
+        case 3:
+          v7 = byte_C77470[3];
+          v5 = byte_C77470[2];
+          break;
+        default:
+          break;
+      }
+      if ( (v5 ^ ((v7 << 16) | (v7 >> 8) & 0xFF00 | HIBYTE(v7))) == dword_C740F8[i] )// check [0x252D0D17, 0x253F1D15, 0xBEA57768, 0xBAA5756E]
+      {
+        dword_C77458[i] = 1;
+        return lpAddress;
+      }
+      return (void *)v3;
+    }
+  }
+  return (void *)v3;
+}
+```
+mình đã comment chức năng của 1 số dòng code như trên.  
+tiếp tục về phân tích hàm main:  
+![image](https://github.com/user-attachments/assets/70a4b655-c32c-406b-8c8d-3414c3343775)  
+chương trình gọi hàm `sub_C719A0` và copy 4 bytes từ `dword_C74018` và 1 bytes từ `byte_C7401C` vào shellcode v4_2.  
+từ đây, ta có thể đoán được rằng KEY[2] == 0xD1 ^ 0xCC == 0x1d.  
+vào hàm `sub_C719A0`:  
 
 
 
