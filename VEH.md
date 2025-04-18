@@ -152,6 +152,7 @@ int __cdecl sub_BA4030(int a1)
 }
 ```
 shellcode này thực hiện gọi exception `int 3` và thực hiện kỹ thuật PEB traversal để gọi `AddVectoredExceptionHandle(1, a1)`  
+ta tiếp tục phân tích except handler:  
 
 
 
