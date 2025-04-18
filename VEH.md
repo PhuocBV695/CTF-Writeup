@@ -22,13 +22,13 @@ ta có thể suy ra khối try/except như sau:
 ```c
 int main() {
     __try {
-        //exeption
+        //exception
         __try {
-            //exeption
+            //exception
             __try {
-                //exeption
+                //exception
                 __try {
-                    //exeption
+                    //exception
                 }
                 __except (loc_AC1FAA(GetExceptionInformation())) {  //except filter
                     loc_AC1FB4();                                   //except handler
