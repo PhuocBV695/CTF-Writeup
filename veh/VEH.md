@@ -462,9 +462,24 @@ ta nhảy vào hàm `sub_7FF6D58D11A0`:
 chức năng chính của hàm này là tăng EIP lên 4.  
 chương trình sẽ nhảy vào:  
 ![image](https://github.com/user-attachments/assets/594797b1-a8d9-4ef5-a46b-d4b662026a5d)  
-ta nhận thấy exception div 0 xuất hiện rất nhiều trong chương trình (26 lần), khiến cho IDA không thể phân tích mã giả:  
+ta nhận thấy exception div 0 xuất hiện rất nhiều trong chương trình (26 lần) và chèn thêm bytes rác 0xE9 khiến cho IDA không thể phân tích mã giả:  
 ![image](https://github.com/user-attachments/assets/e9f90485-7720-4434-826e-4654b71295e1)  
 nên ta sẽ patch nop đi sao cho tương ứng với `EIP+=4`  
+script:  
+```python
+def patch_file(goc,thay):
+    with open("VEH.exe", "rb") as f:
+        data = f.read()
+    pd= data.replace(goc, thay)  
+    with open("VEH.exe", "wb") as f:
+        f.write(pd)
+    print("Đã thay thế thành công.")
+    return 0
+
+patch_file(b'H\xf7\xf0\xe9',b'H\xf7\xf0\x90')
+```
+ta thấy IDA đã gen được assembly và mã giả:  
+![image](https://github.com/user-attachments/assets/37b40b3e-cbec-486b-94b1-f4a40704220f)  
 
 
 
