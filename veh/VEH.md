@@ -347,6 +347,127 @@ for i in keyArray:
 flag:  
 ![image](https://github.com/user-attachments/assets/2634a661-58d4-4912-8c24-e8ab919a8b0f)  
 # VEH  
+main:  
+![image](https://github.com/user-attachments/assets/891c5635-e35a-4c60-8f39-8cef3a886ec1)  
+`initterm` luôn chạy trước main nên ta kiểm tra `initterm`:  
+![image](https://github.com/user-attachments/assets/92518774-afe6-473b-8a73-93080914ef28)  
+hàm `sub_7FF731482540`:  
+![image](https://github.com/user-attachments/assets/6439b2c0-8ebe-4002-975a-7edcc31b0e49)  
+hàm `sub_7FF6D58D11F0`:  
+```c
+__int64 sub_7FF6D58D11F0()
+{
+  void (__fastcall *ProcAddressFNV_1a)(_BYTE *); // r14
+  __int64 i; // rax
+  unsigned int v2; // edx
+  __int64 j; // rsi
+  __int16 v4; // dx
+  char v5; // di
+  unsigned int v6; // edx
+  __int64 k; // rsi
+  __int64 m; // rsi
+  __int16 v9; // dx
+  char v11; // [rsp+28h] [rbp-40h]
+  _BYTE v12[63]; // [rsp+29h] [rbp-3Fh] BYREF
+
+  ProcAddressFNV_1a = (void (__fastcall *)(_BYTE *))GetProcAddressFNV_1a(1102179001, 701355107);// LoadLibraryW
+  v11 = 0;
+  v12[0] = 24;
+  v12[1] = 1;
+  v12[2] = 16;
+  v12[3] = 1;
+  v12[4] = 122;
+  v12[5] = 1;
+  v12[6] = 69;
+  v12[7] = 1;
+  v12[8] = 69;
+  v12[9] = 1;
+  v12[10] = 109;
+  v12[11] = 1;
+  v12[12] = 37;
+  v12[13] = 1;
+  v12[14] = 111;
+  v12[15] = 1;
+  v12[16] = 111;
+  v12[17] = 1;
+  v12[18] = 1;
+  v12[19] = 1;
+  for ( i = 1LL; i != 21; ++i )
+  {
+    v2 = (unsigned __int16)(31 * (unsigned __int8)v12[i - 1]
+                          + ((unsigned int)(-32509 * (__int16)(31 * (unsigned __int8)v12[i - 1] - 31)) >> 16)
+                          - 31);
+    v12[i - 1] = (unsigned __int8)(31 * v12[i - 1] - 127 * ((v2 >> 15) + (v2 >> 6)) - 31 + 127) % 0x7Fu;
+  }
+  ProcAddressFNV_1a(v12);                       // ntdll.dll
+  v11 = 0;
+  qmemcpy(v12, ";lcl}lwlhl|lMl\rlklklll", 22);
+  for ( j = 1LL; j != 23; ++j )
+  {
+    v4 = (unsigned __int8)v12[j - 1];
+    v5 = 19 * v4;
+    v6 = (unsigned __int16)(19 * v4 + ((unsigned int)(-32509 * (__int16)(19 * v4 - 2052)) >> 16) - 2052);
+    v12[j - 1] = (unsigned __int8)(v5 - 127 * ((v6 >> 15) + (v6 >> 6)) - 4 + 127) % 0x7Fu;
+  }
+  ProcAddressFNV_1a(v12);                       // user32.dll
+  v11 = 0;
+  v12[0] = 12;
+  qmemcpy(&v12[1], "K{K|K KWK.K@K\tKyKhKhKKK", 23);
+  for ( k = 1LL; k != 25; ++k )
+    v12[k - 1] = (unsigned __int8)(7 * v12[k - 1]
+                                 - 127
+                                 * (((unsigned __int16)(7 * (unsigned __int8)v12[k - 1]
+                                                      + ((unsigned int)(-32509
+                                                                      * (__int16)(7 * (unsigned __int8)v12[k - 1] - 525)) >> 16)
+                                                      - 525) >> 15)
+                                  + ((unsigned __int16)(7 * (unsigned __int8)v12[k - 1]
+                                                      + ((unsigned int)(-32509
+                                                                      * (__int16)(7 * (unsigned __int8)v12[k - 1] - 525)) >> 16)
+                                                      - 525) >> 6))
+                                 - 13
+                                 + 127)
+               % 0x7Fu;
+  ProcAddressFNV_1a(v12);                       // crypt32.dll
+  v11 = 0;
+  v12[0] = 17;
+  v12[1] = 70;
+  v12[2] = 8;
+  v12[3] = 70;
+  v12[4] = 7;
+  qmemcpy(&v12[5], "FrF\\F+F.F'F\vF\bF@F@FFF", 21);
+  for ( m = 1LL; m != 27; ++m )
+  {
+    v9 = 18 * (unsigned __int8)v12[m - 1];
+    v12[m - 1] = (unsigned __int8)(((unsigned __int16)((unsigned int)(33027 * (__int16)(1260 - v9)) >> 16) >> 15)
+                                 + ((unsigned __int16)((unsigned int)(33027 * (__int16)(1260 - v9)) >> 16) >> 6)
+                                 - (v9
+                                  + ((((unsigned __int16)((unsigned int)(33027 * (__int16)(1260 - v9)) >> 16) >> 15)
+                                    + (unsigned __int8)((unsigned __int16)((unsigned int)(33027 * (__int16)(1260 - v9)) >> 16) >> 6)) << 7))
+                                 - 20
+                                 + 127)
+               % 0x7Fu;
+  }
+  ProcAddressFNV_1a(v12);                       // Advapi32.dll
+  return 0LL;
+}
+```
+tuy hàm `sub_7FF6D58D11F0` bị obfuscate khá phức tạp nhưng ta có thể biết được hàm này làm gì bằng cách debug.  
+suy ra hàm này load các thư viện : `ntdll.dll`, `user32.dll`, `crypt32.dll` và `Advapi32.dll`.  
+![image](https://github.com/user-attachments/assets/d16fe3b9-2f33-4780-b7f3-8bb870d6dda3)  
+chương trình đăng ký hàm `sub_7FF6D58D11A0` với `AddVectoredExceptionHandle` với mức ưu tiên cao nhất `1`.  
+khi ta gặp exception, chương trình sẽ chuyển hướng sang `sub_7FF6D58D11A0`, ở đây là exception chia cho 0:  
+![image](https://github.com/user-attachments/assets/a3c6005f-ee64-46fe-86a4-c79cf9e54001)  
+ta nhảy vào hàm `sub_7FF6D58D11A0`:  
+![image](https://github.com/user-attachments/assets/d6fcaca4-7003-48df-80f3-bfc232ab368f)  
+chức năng chính của hàm này là tăng EIP lên 4.  
+chương trình sẽ nhảy vào:  
+![image](https://github.com/user-attachments/assets/594797b1-a8d9-4ef5-a46b-d4b662026a5d)  
+ta nhận thấy exception div 0 xuất hiện rất nhiều trong chương trình (26 lần), khiến cho IDA không thể phân tích mã giả:  
+![image](https://github.com/user-attachments/assets/e9f90485-7720-4434-826e-4654b71295e1)  
+nên ta sẽ patch nop đi sao cho tương ứng với `EIP+=4`  
+
+
+
 
 
 
